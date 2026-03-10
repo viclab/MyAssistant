@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的 AI 助手</title>
+<style>
+  :root {
+    --primary: #6c63ff;
+    --primary-light: #a29bfe;
+    --bg: #f8f9ff;
+    --card: #ffffff;
+    --text: #2d3436;
+    --text-secondary: #636e72;
+    --border: #e0e0f0;
+    --success: #00b894;
+    --warning: #fdcb6e;
+    --danger: #e17055;
+    --info: #74b9ff;
+    --radius: 16px;
+    --shadow: 0 4px 20px rgba(108,99,255,0.08);
+    --shadow-hover: 0 8px 32px rgba(108,99,255,0.16);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  /* 侧边栏 */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 220px; background: var(--card);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 24px 0;
+    z-index: 100;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.04);
+  }
+  .logo {
+    padding: 0 24px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .logo p { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  .nav { padding: 16px 12px; flex: 1; }
+  .nav a {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    color: var(--text-secondary); text-decoration: none;
+    font-size: 14px; font-weight: 500;
+    transition: all 0.2s; margin-bottom: 4px;
+  }
+  .nav a:hover, .nav a.active {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+  }
+  .nav a .icon { font-size: 18px; width: 24px; text-align: center; }
+  /* 主内容 */
+  .main {
+    margin-left: 220px;
+    padding: 32px;
+    min-height: 100vh;
+  }
+  .page-header {
+    margin-bottom: 28px;
+  }
+  .page-header h2 { font-size: 24px; font-weight: 700; }
+  .page-header p { color: var(--text-secondary); margin-top: 4px; font-size: 14px; }
+  /* 概览卡片 */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    transition: all 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--text);
+    display: block;
+  }
+  .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+  .stat-card .icon-wrap {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 16px;
+  }
+  .stat-card .value { font-size: 28px; font-weight: 700; line-height: 1; }
+  .stat-card .label { font-size: 13px; color: var(--text-secondary); margin-top: 6px; }
+  .bg-purple { background: linear-gradient(135deg, #a29bfe33, #6c63ff22); }
+  .bg-green { background: linear-gradient(135deg, #00b89433, #00cec922); }
+  .bg-orange { background: linear-gradient(135deg, #fdcb6e33, #e17055222); }
+  .bg-blue { background: linear-gradient(135deg, #74b9ff33, #0984e322); }
+  .bg-pink { background: linear-gradient(135deg, #fd79a833, #e8406422); }
+  .bg-teal { background: linear-gradient(135deg, #55efc433, #00b89422); }
+  /* 快捷入口 */
+  .quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+  }
+  .quick-link {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text);
+    box-shadow: var(--shadow);
+    transition: all 0.2s;
+    display: block;
+  }
+  .quick-link:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+  .quick-link .ql-icon { font-size: 32px; margin-bottom: 8px; }
+  .quick-link .ql-name { font-size: 14px; font-weight: 600; }
+  .quick-link .ql-desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+  /* Token 输入 */
+  .token-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .token-box {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: 360px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .token-box h3 { font-size: 18px; margin-bottom: 8px; }
+  .token-box p { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+  .token-box input {
+    width: 100%; padding: 12px 16px;
+    border: 2px solid var(--border); border-radius: 10px;
+    font-size: 14px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .token-box input:focus { border-color: var(--primary); }
+  .token-box button {
+    width: 100%; padding: 12px;
+    background: var(--primary); color: white;
+    border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 12px;
+    transition: opacity 0.2s;
+  }
+  .token-box button:hover { opacity: 0.9; }
+  /* 加载状态 */
+  .loading { opacity: 0.6; }
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton 1.5s infinite;
+    border-radius: 8px; height: 24px;
+  }
+  @keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @media (max-width: 768px) {
+    .sidebar { width: 60px; }
+    .sidebar .logo, .sidebar .nav a span { display: none; }
+    .main { margin-left: 60px; padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="tokenModal" class="token-modal" style="display:none">
+  <div class="token-box">
+    <h3>🔐 请输入访问密钥</h3>
+    <p>为了保护你的数据安全，请输入 ADMIN_TOKEN</p>
+    <input type="password" id="tokenInput" placeholder="输入 Token" />
+    <button onclick="saveToken()">确认</button>
+  </div>
+</div>
+
+<nav class="sidebar">
+  <div class="logo">
+    <h1>🤖 AI 助手</h1>
+    <p>My Personal Assistant</p>
+  </div>
+  <div class="nav">
+    <a href="/" class="active"><span class="icon">🏠</span><span>概览</span></a>
+    <a href="/notes.html"><span class="icon">📝</span><span>速记</span></a>
+    <a href="/todos.html"><span class="icon">✅</span><span>待办</span></a>
+    <a href="/diary.html"><span class="icon">📖</span><span>日记</span></a>
+    <a href="/mood.html"><span class="icon">😊</span><span>情绪</span></a>
+    <a href="/finance.html"><span class="icon">💰</span><span>财务</span></a>
+    <a href="/habits.html"><span class="icon">🎯</span><span>习惯</span></a>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h2>今日概览 📊</h2>
+    <p id="dateStr">加载中...</p>
+  </div>
+
+  <div class="stats-grid" id="statsGrid">
+    <a class="stat-card" href="/notes.html">
+      <div class="icon-wrap bg-purple">📝</div>
+      <div class="value" id="stat-notes">-</div>
+      <div class="label">今日笔记</div>
+    </a>
+    <a class="stat-card" href="/todos.html">
+      <div class="icon-wrap bg-orange">✅</div>
+      <div class="value" id="stat-todos">-</div>
+      <div class="label">待完成事项</div>
+    </a>
+    <a class="stat-card" href="/mood.html">
+      <div class="icon-wrap bg-pink">😊</div>
+      <div class="value" id="stat-mood">-</div>
+      <div class="label">今日心情</div>
+    </a>
+    <a class="stat-card" href="/habits.html">
+      <div class="icon-wrap bg-green">🎯</div>
+      <div class="value" id="stat-habits">-</div>
+      <div class="label">今日习惯打卡</div>
+    </a>
+    <a class="stat-card" href="/finance.html">
+      <div class="icon-wrap bg-blue">💰</div>
+      <div class="value" id="stat-expense">-</div>
+      <div class="label">本月支出</div>
+    </a>
+    <a class="stat-card" href="/finance.html">
+      <div class="icon-wrap bg-teal">💵</div>
+      <div class="value" id="stat-income">-</div>
+      <div class="label">本月收入</div>
+    </a>
+  </div>
+
+  <h3 style="font-size:16px;margin-bottom:16px;color:var(--text-secondary)">快捷入口</h3>
+  <div class="quick-links">
+    <a class="quick-link" href="/notes.html">
+      <div class="ql-icon">📝</div>
+      <div class="ql-name">速记</div>
+      <div class="ql-desc">图文并茂展示</div>
+    </a>
+    <a class="quick-link" href="/todos.html">
+      <div class="ql-icon">✅</div>
+      <div class="ql-name">待办</div>
+      <div class="ql-desc">任务清单管理</div>
+    </a>
+    <a class="quick-link" href="/diary.html">
+      <div class="ql-icon">📖</div>
+      <div class="ql-name">日记</div>
+      <div class="ql-desc">AI 生成每日日记</div>
+    </a>
+    <a class="quick-link" href="/mood.html">
+      <div class="ql-icon">😊</div>
+      <div class="ql-name">情绪</div>
+      <div class="ql-desc">情绪记录与分析</div>
+    </a>
+    <a class="quick-link" href="/finance.html">
+      <div class="ql-icon">💰</div>
+      <div class="ql-name">财务</div>
+      <div class="ql-desc">收支记账明细</div>
+    </a>
+    <a class="quick-link" href="/habits.html">
+      <div class="ql-icon">🎯</div>
+      <div class="ql-name">习惯</div>
+      <div class="ql-desc">习惯打卡追踪</div>
+    </a>
+  </div>
+</main>
+
+<script>
+const TOKEN_KEY = 'myassistant_token';
+let token = localStorage.getItem(TOKEN_KEY) || '';
+
+function saveToken() {
+  token = document.getElementById('tokenInput').value.trim();
+  if (!token) return;
+  localStorage.setItem(TOKEN_KEY, token);
+  document.getElementById('tokenModal').style.display = 'none';
+  loadData();
+}
+
+function checkToken() {
+  if (!token) {
+    document.getElementById('tokenModal').style.display = 'flex';
+  } else {
+    loadData();
+  }
+}
+
+async function apiFetch(url) {
+  const resp = await fetch(url, {
+    headers: { 'X-Admin-Token': token }
+  });
+  if (resp.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    token = '';
+    document.getElementById('tokenModal').style.display = 'flex';
+    throw new Error('unauthorized');
+  }
+  return resp.json();
+}
+
+async function loadData() {
+  const now = new Date();
+  const dateOptions = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+  document.getElementById('dateStr').textContent = now.toLocaleDateString('zh-CN', dateOptions);
+
+  try {
+    const data = await apiFetch('/api/overview');
+    document.getElementById('stat-notes').textContent = data.today_notes_count ?? 0;
+    document.getElementById('stat-todos').textContent = data.pending_todos ?? 0;
+    const mood = data.today_mood;
+    const moodScore = data.today_mood_score;
+    const moodEmoji = { '开心': '😊', '平静': '😌', '焦虑': '😰', '难过': '😢', '愤怒': '😠', '疲惫': '😴', '兴奋': '🤩' };
+    document.getElementById('stat-mood').textContent = mood ? `${moodEmoji[mood] || '💭'}${mood}` : '暂无';
+    document.getElementById('stat-habits').textContent = `${data.habits_done_today ?? 0}/${data.habits_total ?? 0}`;
+    document.getElementById('stat-expense').textContent = `¥${(data.month_expense || 0).toFixed(0)}`;
+    document.getElementById('stat-income').textContent = `¥${(data.month_income || 0).toFixed(0)}`;
+  } catch (e) {
+    if (e.message !== 'unauthorized') console.error(e);
+  }
+}
+
+checkToken();
+</script>
+</body>
+</html>
