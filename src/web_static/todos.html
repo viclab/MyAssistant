@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>待办 - AI 助手</title>
+<style>
+  :root { --primary: #6c63ff; --primary-light: #a29bfe; --bg: #f8f9ff; --card: #ffffff; --text: #2d3436; --text-secondary: #636e72; --border: #e0e0f0; --success: #00b894; --danger: #e17055; --radius: 16px; --shadow: 0 4px 20px rgba(108,99,255,0.08); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; z-index: 100; }
+  .logo { padding: 0 24px 24px; border-bottom: 1px solid var(--border); }
+  .logo h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .nav { padding: 16px 12px; }
+  .nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; margin-bottom: 4px; }
+  .nav a:hover, .nav a.active { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; }
+  .nav a .icon { font-size: 18px; width: 24px; text-align: center; }
+  .main { margin-left: 220px; padding: 32px; max-width: 800px; }
+  .page-header { margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; }
+  .page-header h2 { font-size: 24px; font-weight: 700; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+  .tab { padding: 8px 20px; border-radius: 20px; border: 2px solid var(--border); background: var(--card); color: var(--text-secondary); font-size: 14px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+  .tab:hover, .tab.active { border-color: var(--primary); background: var(--primary); color: white; }
+  .todo-list { display: flex; flex-direction: column; gap: 12px; }
+  .todo-item { background: var(--card); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 14px; transition: all 0.2s; }
+  .todo-item:hover { box-shadow: 0 8px 28px rgba(108,99,255,0.12); }
+  .todo-item.done { opacity: 0.6; }
+  .todo-item.done .todo-content { text-decoration: line-through; color: var(--text-secondary); }
+  .todo-check { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .todo-check:hover { border-color: var(--success); }
+  .todo-item.done .todo-check { background: var(--success); border-color: var(--success); color: white; font-size: 12px; }
+  .todo-body { flex: 1; }
+  .todo-content { font-size: 15px; line-height: 1.5; }
+  .todo-meta { display: flex; gap: 12px; margin-top: 6px; }
+  .todo-date { font-size: 12px; color: var(--text-secondary); }
+  .todo-due { font-size: 12px; color: var(--danger); background: #fff0ee; padding: 2px 8px; border-radius: 10px; }
+  .todo-delete { width: 28px; height: 28px; border-radius: 50%; border: none; background: #fff0ee; color: var(--danger); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: all 0.2s; opacity: 0; }
+  .todo-item:hover .todo-delete { opacity: 1; }
+  .todo-delete:hover { background: var(--danger); color: white; }
+  .badge { display: inline-block; width: 22px; height: 22px; background: var(--primary); color: white; border-radius: 50%; font-size: 12px; text-align: center; line-height: 22px; margin-left: 8px; font-weight: 600; }
+  .empty { text-align: center; padding: 60px 20px; }
+  .empty .empty-icon { font-size: 56px; margin-bottom: 16px; }
+  .empty p { color: var(--text-secondary); }
+  .token-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .token-box { background: var(--card); border-radius: var(--radius); padding: 32px; width: 360px; }
+  .token-box h3 { font-size: 18px; margin-bottom: 8px; }
+  .token-box p { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+  .token-box input { width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; }
+  .token-box input:focus { border-color: var(--primary); }
+  .token-box button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  @media (max-width: 768px) { .sidebar { width: 60px; } .sidebar .logo, .sidebar .nav a span { display: none; } .main { margin-left: 60px; padding: 16px; } }
+</style>
+</head>
+<body>
+
+<div id="tokenModal" class="token-modal" style="display:none">
+  <div class="token-box">
+    <h3>🔐 请输入访问密钥</h3>
+    <p>ADMIN_TOKEN</p>
+    <input type="password" id="tokenInput" placeholder="输入 Token" onkeydown="if(event.key==='Enter')saveToken()" />
+    <button onclick="saveToken()">确认</button>
+  </div>
+</div>
+
+<nav class="sidebar">
+  <div class="logo"><h1>🤖 AI 助手</h1></div>
+  <div class="nav">
+    <a href="/"><span class="icon">🏠</span><span>概览</span></a>
+    <a href="/notes.html"><span class="icon">📝</span><span>速记</span></a>
+    <a href="/todos.html" class="active"><span class="icon">✅</span><span>待办</span></a>
+    <a href="/diary.html"><span class="icon">📖</span><span>日记</span></a>
+    <a href="/mood.html"><span class="icon">😊</span><span>情绪</span></a>
+    <a href="/finance.html"><span class="icon">💰</span><span>财务</span></a>
+    <a href="/habits.html"><span class="icon">🎯</span><span>习惯</span></a>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h2>待办 ✅</h2>
+    <span id="pendingCount" class="badge" style="display:none">0</span>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('pending', this)">
+      未完成 <span id="tabPendingCount"></span>
+    </button>
+    <button class="tab" onclick="showTab('done', this)">已完成</button>
+    <button class="tab" onclick="showTab('all', this)">全部</button>
+  </div>
+  <div class="todo-list" id="todoList"></div>
+  <div class="empty" id="emptyState" style="display:none">
+    <div class="empty-icon">🎉</div>
+    <p>没有待办事项，给自己加个任务吧！</p>
+  </div>
+</main>
+
+<script>
+const TOKEN_KEY = 'myassistant_token';
+let token = localStorage.getItem(TOKEN_KEY) || '';
+let allTodos = [];
+let currentTab = 'pending';
+
+function saveToken() {
+  token = document.getElementById('tokenInput').value.trim();
+  if (!token) return;
+  localStorage.setItem(TOKEN_KEY, token);
+  document.getElementById('tokenModal').style.display = 'none';
+  loadTodos();
+}
+
+async function apiFetch(url, options) {
+  const resp = await fetch(url, { ...options, headers: { 'X-Admin-Token': token, ...(options?.headers) } });
+  if (resp.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    token = '';
+    document.getElementById('tokenModal').style.display = 'flex';
+    throw new Error('unauthorized');
+  }
+  return resp.json();
+}
+
+function showTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTodos();
+}
+
+function renderTodos() {
+  const list = document.getElementById('todoList');
+  const empty = document.getElementById('emptyState');
+  let filtered = allTodos;
+  if (currentTab === 'pending') filtered = allTodos.filter(t => !t.done);
+  else if (currentTab === 'done') filtered = allTodos.filter(t => t.done);
+
+  list.innerHTML = '';
+  empty.style.display = filtered.length === 0 ? 'block' : 'none';
+
+  filtered.forEach(todo => {
+    const dueHtml = todo.due_date
+      ? `<span class="todo-due">⏰ 截止 ${todo.due_date}</span>`
+      : '';
+    const checkHtml = todo.done
+      ? `<div class="todo-check">✓</div>`
+      : `<div class="todo-check" onclick="completeTodo('${todo.id}')"></div>`;
+    list.insertAdjacentHTML('beforeend', `
+      <div class="todo-item ${todo.done ? 'done' : ''}" id="todo-${todo.id}">
+        ${checkHtml}
+        <div class="todo-body">
+          <div class="todo-content">${(todo.content || '').replace(/</g,'&lt;')}</div>
+          <div class="todo-meta">
+            <span class="todo-date">📅 ${(todo.created_at || '').substring(0, 10)}</span>
+            ${dueHtml}
+          </div>
+        </div>
+        <button class="todo-delete" onclick="deleteTodo('${todo.id}')">🗑️</button>
+      </div>
+    `);
+  });
+
+  const pending = allTodos.filter(t => !t.done);
+  document.getElementById('pendingCount').textContent = pending.length;
+  document.getElementById('pendingCount').style.display = pending.length > 0 ? 'inline-block' : 'none';
+  document.getElementById('tabPendingCount').textContent = pending.length > 0 ? `(${pending.length})` : '';
+}
+
+async function completeTodo(id) {
+  try {
+    await apiFetch(`/api/todos/${id}/done`, { method: 'POST' });
+    const todo = allTodos.find(t => t.id === id);
+    if (todo) { todo.done = true; todo.done_at = new Date().toISOString(); }
+    renderTodos();
+  } catch(e) {}
+}
+
+async function deleteTodo(id) {
+  if (!confirm('确认删除这条待办？')) return;
+  try {
+    await apiFetch(`/api/todos/${id}`, { method: 'DELETE' });
+    allTodos = allTodos.filter(t => t.id !== id);
+    renderTodos();
+  } catch(e) {}
+}
+
+async function loadTodos() {
+  try {
+    const data = await apiFetch('/api/todos');
+    allTodos = data.todos || [];
+    renderTodos();
+  } catch(e) {}
+}
+
+if (!token) document.getElementById('tokenModal').style.display = 'flex';
+else loadTodos();
+</script>
+</body>
+</html>
