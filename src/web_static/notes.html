@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>速记 - AI 助手</title>
+<style>
+  :root {
+    --primary: #6c63ff;
+    --primary-light: #a29bfe;
+    --bg: #f8f9ff;
+    --card: #ffffff;
+    --text: #2d3436;
+    --text-secondary: #636e72;
+    --border: #e0e0f0;
+    --radius: 16px;
+    --shadow: 0 4px 20px rgba(108,99,255,0.08);
+    --shadow-hover: 0 8px 32px rgba(108,99,255,0.16);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; z-index: 100; }
+  .logo { padding: 0 24px 24px; border-bottom: 1px solid var(--border); }
+  .logo h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .nav { padding: 16px 12px; flex: 1; }
+  .nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; margin-bottom: 4px; }
+  .nav a:hover, .nav a.active { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; }
+  .nav a .icon { font-size: 18px; width: 24px; text-align: center; }
+  .main { margin-left: 220px; padding: 32px; }
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+  .page-header h2 { font-size: 24px; font-weight: 700; }
+  .date-filter { display: flex; gap: 8px; flex-wrap: wrap; }
+  .date-btn { padding: 6px 14px; border-radius: 20px; border: 2px solid var(--border); background: var(--card); color: var(--text-secondary); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .date-btn:hover, .date-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
+  /* 瀑布流 */
+  .masonry { columns: 3; column-gap: 20px; }
+  .note-card { break-inside: avoid; margin-bottom: 20px; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); transition: all 0.2s; }
+  .note-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+  .note-card.text-only { padding: 20px; }
+  .note-card.text-only .note-content { font-size: 15px; line-height: 1.7; }
+  .note-card.text-only:nth-child(4n) { background: linear-gradient(135deg, #f3f0ff, #fff); }
+  .note-card.text-only:nth-child(4n+1) { background: linear-gradient(135deg, #f0fff8, #fff); }
+  .note-card.text-only:nth-child(4n+2) { background: linear-gradient(135deg, #fff8f0, #fff); }
+  .note-card.text-only:nth-child(4n+3) { background: linear-gradient(135deg, #f0f8ff, #fff); }
+  .note-card .note-images { display: grid; gap: 2px; }
+  .note-card .note-images.single img { width: 100%; max-height: 320px; object-fit: cover; display: block; }
+  .note-card .note-images.multi { grid-template-columns: 1fr 1fr; }
+  .note-card .note-images.multi img { width: 100%; height: 150px; object-fit: cover; display: block; }
+  .note-card .note-images.multi3 img { width: 100%; height: 150px; object-fit: cover; display: block; }
+  .note-card .note-images.multi3 img:first-child { grid-column: span 2; height: 180px; }
+  .note-card .note-images.multi3 { grid-template-columns: 1fr 1fr; }
+  .note-card .note-images img { cursor: pointer; transition: opacity 0.2s; }
+  .note-card .note-images img:hover { opacity: 0.88; }
+  .note-card .note-footer { padding: 14px 16px; }
+  .note-card .note-text { font-size: 14px; line-height: 1.6; margin-bottom: 8px; }
+  .note-card .note-time { font-size: 12px; color: var(--text-secondary); }
+  .note-card.text-only .note-time { margin-top: 12px; font-size: 12px; color: var(--text-secondary); }
+  /* 灯箱 */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 2000; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+  .lightbox.show { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 8px; cursor: default; }
+  .lightbox-close { position: absolute; top: 20px; right: 24px; color: white; font-size: 36px; cursor: pointer; line-height: 1; }
+  .empty { text-align: center; padding: 80px 20px; }
+  .empty .empty-icon { font-size: 64px; margin-bottom: 16px; }
+  .empty p { color: var(--text-secondary); font-size: 15px; }
+  .token-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .token-box { background: var(--card); border-radius: var(--radius); padding: 32px; width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .token-box h3 { font-size: 18px; margin-bottom: 8px; }
+  .token-box p { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+  .token-box input { width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; }
+  .token-box input:focus { border-color: var(--primary); }
+  .token-box button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  @media (max-width: 1200px) { .masonry { columns: 2; } }
+  @media (max-width: 768px) {
+    .sidebar { width: 60px; }
+    .sidebar .logo, .sidebar .nav a span { display: none; }
+    .main { margin-left: 60px; padding: 16px; }
+    .masonry { columns: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div id="tokenModal" class="token-modal" style="display:none">
+  <div class="token-box">
+    <h3>🔐 请输入访问密钥</h3>
+    <p>ADMIN_TOKEN</p>
+    <input type="password" id="tokenInput" placeholder="输入 Token" onkeydown="if(event.key==='Enter')saveToken()" />
+    <button onclick="saveToken()">确认</button>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close" onclick="closeLightbox()">✕</span>
+  <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation()">
+</div>
+
+<nav class="sidebar">
+  <div class="logo"><h1>🤖 AI 助手</h1></div>
+  <div class="nav">
+    <a href="/"><span class="icon">🏠</span><span>概览</span></a>
+    <a href="/notes.html" class="active"><span class="icon">📝</span><span>速记</span></a>
+    <a href="/todos.html"><span class="icon">✅</span><span>待办</span></a>
+    <a href="/diary.html"><span class="icon">📖</span><span>日记</span></a>
+    <a href="/mood.html"><span class="icon">😊</span><span>情绪</span></a>
+    <a href="/finance.html"><span class="icon">💰</span><span>财务</span></a>
+    <a href="/habits.html"><span class="icon">🎯</span><span>习惯</span></a>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <h2>速记 📝</h2>
+    <div class="date-filter" id="dateFilter">
+      <button class="date-btn active" data-date="" onclick="loadNotes('')">全部（最近7天）</button>
+    </div>
+  </div>
+  <div class="masonry" id="noteGrid"></div>
+  <div class="empty" id="emptyState" style="display:none">
+    <div class="empty-icon">📝</div>
+    <p>还没有速记，快去企业微信给我发消息吧！</p>
+  </div>
+</main>
+
+<script>
+const TOKEN_KEY = 'myassistant_token';
+let token = localStorage.getItem(TOKEN_KEY) || '';
+
+function saveToken() {
+  token = document.getElementById('tokenInput').value.trim();
+  if (!token) return;
+  localStorage.setItem(TOKEN_KEY, token);
+  document.getElementById('tokenModal').style.display = 'none';
+  init();
+}
+
+async function apiFetch(url) {
+  const resp = await fetch(url, { headers: { 'X-Admin-Token': token } });
+  if (resp.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    token = '';
+    document.getElementById('tokenModal').style.display = 'flex';
+    throw new Error('unauthorized');
+  }
+  return resp.json();
+}
+
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+function buildImages(images) {
+  if (!images || images.length === 0) return '';
+  const n = images.length;
+  const cls = n === 1 ? 'single' : n === 2 ? 'multi' : 'multi3';
+  const show = images.slice(0, n === 1 ? 1 : n === 2 ? 2 : 3);
+  const imgs = show.map(url =>
+    `<img src="${url}" alt="图片" onclick="openLightbox('${url}')" loading="lazy">`
+  ).join('');
+  return `<div class="note-images ${cls}">${imgs}</div>`;
+}
+
+function renderNote(note) {
+  const images = note.image_urls || [];
+  const hasImages = images.length > 0;
+  const time = (note.time || '').substring(5, 16);
+  const content = (note.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  if (!hasImages) {
+    return `
+      <div class="note-card text-only">
+        <div class="note-content">${content}</div>
+        <div class="note-time">⏰ ${time}</div>
+      </div>`;
+  }
+  return `
+    <div class="note-card">
+      ${buildImages(images)}
+      <div class="note-footer">
+        ${content ? `<div class="note-text">${content}</div>` : ''}
+        <div class="note-time">⏰ ${time}</div>
+      </div>
+    </div>`;
+}
+
+async function loadNotes(date) {
+  // 更新按钮状态
+  document.querySelectorAll('.date-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.date === date);
+  });
+  const grid = document.getElementById('noteGrid');
+  const empty = document.getElementById('emptyState');
+  grid.innerHTML = '';
+  try {
+    const url = date ? `/api/notes?date=${date}` : '/api/notes';
+    const data = await apiFetch(url);
+    const notes = data.notes || [];
+    empty.style.display = notes.length === 0 ? 'block' : 'none';
+    notes.forEach(note => {
+      grid.insertAdjacentHTML('beforeend', renderNote(note));
+    });
+  } catch(e) {
+    if (e.message !== 'unauthorized') {
+      empty.style.display = 'block';
+    }
+  }
+}
+
+async function loadDates() {
+  try {
+    const data = await apiFetch('/api/notes/dates');
+    const filter = document.getElementById('dateFilter');
+    (data.dates || []).slice(0, 10).forEach(d => {
+      const btn = document.createElement('button');
+      btn.className = 'date-btn';
+      btn.textContent = d;
+      btn.dataset.date = d;
+      btn.onclick = () => loadNotes(d);
+      filter.appendChild(btn);
+    });
+  } catch(e) {}
+}
+
+async function init() {
+  await loadDates();
+  await loadNotes('');
+}
+
+if (!token) {
+  document.getElementById('tokenModal').style.display = 'flex';
+} else {
+  init();
+}
+</script>
+</body>
+</html>
