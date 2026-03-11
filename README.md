@@ -46,7 +46,7 @@ nano src/.env   # 填入企微配置
 | WEWORK_ENCODING_AES_KEY | 回调加密Key | 自己设定43位随机字符串 |
 | DEFAULT_USER_ID | 你的企微账号 | 企微个人信息中的账号 |
 | ADMIN_TOKEN | Web后台密码 | 自己设定 |
-| WEB_DOMAIN | 服务器IP:端口 | 如 43.134.142.4:9000 |
+| WEB_DOMAIN | 服务器IP:端口 | 如 127.0.0.1:9000 |
 
 ### 4. 启动服务
 
